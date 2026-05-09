@@ -1,0 +1,31 @@
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+build/
+dist/
+*.egg-info/
+
+# Local and AutoDL heavy artifacts.
+data/
+models/
+runs/
+artifacts/
+checkpoints/
+*.safetensors
+*.bin
+*.pt
+*.pth
+*.ckpt
+
+# Generated experiment payloads can be large.
+*.npz
+*.npy
+
+# Secrets.
+.env
+hf_token*

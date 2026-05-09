@@ -1,0 +1,12 @@
+[project]
+name = "knowledge-editing-drift"
+version = "0.1.0"
+description = "Diagnostics and visualization pipeline for sequential knowledge editing collapse experiments."
+requires-python = ">=3.10"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+

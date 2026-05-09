@@ -1,0 +1,48 @@
+# 主实验默认模型。需要提前在 Hugging Face 申请访问权限。
+model: meta-llama/Meta-Llama-3-8B-Instruct
+
+# 仅用于工程调试的备用模型；主实验不要和 Llama 结果混在同一张表里。
+fallback_model: Qwen/Qwen2.5-7B-Instruct
+
+# 第一版先跑英文 ZsRE，跑通后再补 CounterFact。
+dataset: zsre
+seed: 42
+n_edits: 100
+
+# 连续编辑检查点。
+checkpoints: [0, 1, 10, 50, 100]
+
+# 第一版核心方法矩阵：
+# FT-L：直接微调基线
+# ROME/MEMIT/PMET：locate-then-edit 参数编辑代表
+# SCR-LITE：非参数/记忆式对照
+methods: [FT-L, ROME, MEMIT, PMET, SCR-LITE]
+
+paths:
+  # AutoDL 数据盘根目录。
+  autodl_root: /root/autodl-tmp
+  models: /root/autodl-tmp/models
+  data: /root/autodl-tmp/data
+  runs: /root/autodl-tmp/runs
+  artifacts: /root/autodl-tmp/artifacts
+  # EasyEdit 仓库位置。
+  easyedit_root: /root/EasyEdit
+
+runtime:
+  # A800 80GB 默认用 float16。
+  dtype: float16
+  device_map: auto
+  max_input_length: 256
+  max_new_tokens: 32
+  batch_size: 4
+  hidden_batch_size: 4
+  # 用于 hidden-state drift 和投影图的 probe 数量；显存紧张时先降到 20。
+  probe_limit: 200
+  token_trajectory_count: 3
+  # 只统计主干层参数，避免无关 embedding/head 影响扰动解释。
+  weight_name_filter: model.layers.
+
+projection:
+  # t-SNE 至少多 seed 复查，不能单独作为结论依据。
+  tsne_seeds: [42, 43, 44]
+  sample_per_checkpoint: 200

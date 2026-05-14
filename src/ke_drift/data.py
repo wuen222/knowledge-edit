@@ -86,17 +86,50 @@ def _collect_prompts(value: Any) -> list[str]:
 
 def _collect_prompt_targets(value: Any, default_target: str = "") -> list[dict[str, str]]:
     pairs: list[dict[str, str]] = []
-    items = value.values() if isinstance(value, dict) and "prompt" not in value else _as_list(value)
-    for item in items:
+
+    def visit(item: Any) -> None:
         if isinstance(item, dict):
-            prompt = _first_record_text(item, ("prompt", "src", "question", "input", "text"))
-            target = _first_record_text(item, ("target", "target_new", "answer", "ground_truth", "label", "output"))
-            if not target:
-                target = default_target
-        else:
+            if any(key in item for key in ("prompt", "src", "question", "input", "text")):
+                prompt = _first_record_text(item, ("prompt", "src", "question", "input", "text"))
+                target = _first_record_text(item, ("target", "target_new", "answer", "ground_truth", "label", "output"))
+                if not target:
+                    target = default_target
+                if prompt:
+                    pairs.append({"prompt": prompt, "target": target})
+                return
+            for child in item.values():
+                visit(child)
+            return
+        if isinstance(item, (list, tuple)):
+            for child in item:
+                visit(child)
+            return
+        if item is not None:
             prompt = _text(item)
             target = default_target
-        if prompt:
+            if prompt:
+                pairs.append({"prompt": prompt, "target": target})
+
+    visit(value)
+    return pairs
+
+
+def _collect_zsre_locality(record: dict[str, Any]) -> list[dict[str, str]]:
+    loc_values = _as_list(record.get("loc"))
+    loc_ans_values = _as_list(record.get("loc_ans"))
+    pairs: list[dict[str, str]] = []
+    for idx, item in enumerate(loc_values):
+        if isinstance(item, dict):
+            prompt = _first_record_text(item, ("prompt", "src", "question", "input", "text"))
+        else:
+            prompt = _text(item)
+        if idx < len(loc_ans_values):
+            target = _text(loc_ans_values[idx])
+        elif loc_ans_values:
+            target = _text(loc_ans_values[0])
+        else:
+            target = ""
+        if prompt and target:
             pairs.append({"prompt": prompt, "target": target})
     return pairs
 
@@ -120,12 +153,15 @@ def normalize_record(record: dict[str, Any], index: int, dataset: str) -> EditRe
         return None
 
     rephrase_prompts: list[str] = []
-    for key in ("rephrase", "rephrases", "rephrase_prompts", "paraphrase_prompts"):
+    for key in ("rephrase", "rephrase_prompt", "rephrases", "rephrase_prompts", "paraphrase_prompts"):
         rephrase_prompts.extend(_collect_prompts(record.get(key)))
 
     locality_prompts: list[dict[str, str]] = []
-    for key in ("locality", "loc", "neighborhood", "neighborhood_prompts"):
-        locality_prompts.extend(_collect_prompt_targets(record.get(key), default_target=ground_truth))
+    if dataset.lower() == "zsre" and "loc" in record:
+        locality_prompts.extend(_collect_zsre_locality(record))
+    else:
+        for key in ("locality", "loc", "neighborhood", "neighborhood_prompts"):
+            locality_prompts.extend(_collect_prompt_targets(record.get(key), default_target=ground_truth))
 
     portability_prompts: list[dict[str, str]] = []
     for key in ("portability", "portability_prompts", "subject_replace", "inverse_relation", "one_hop"):

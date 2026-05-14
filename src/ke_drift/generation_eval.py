@@ -130,13 +130,10 @@ def score_predictions(predictions: list[dict[str, Any]]) -> dict[str, Any]:
     for item in predictions:
         by_category[item["category"]].append(item)
 
-    category_scores: dict[str, dict[str, float]] = {}
+    category_scores: dict[str, dict[str, Any]] = {}
     for category, rows in by_category.items():
         scored = [row for row in rows if row.get("target")]
-        if scored:
-            acc = sum(1 for row in scored if row["match"]) / len(scored)
-        else:
-            acc = 0.0
+        acc = sum(1 for row in scored if row["match"]) / len(scored) if scored else None
         category_scores[category] = {
             "accuracy": acc,
             "n": float(len(rows)),
@@ -151,14 +148,10 @@ def score_predictions(predictions: list[dict[str, Any]]) -> dict[str, Any]:
         "portability": "portability",
     }
     dimensions = {
-        name: category_scores.get(category, {"accuracy": 0.0, "n": 0.0, "n_scored": 0.0})["accuracy"]
+        name: category_scores.get(category, {"accuracy": None, "n": 0.0, "n_scored": 0.0})["accuracy"]
         for name, category in dimension_map.items()
     }
-    scored_dimensions = [
-        score
-        for name, score in dimensions.items()
-        if category_scores.get(dimension_map[name], {"n_scored": 0.0})["n_scored"] > 0
-    ]
+    scored_dimensions = [score for score in dimensions.values() if score is not None]
     dimensions["average"] = sum(scored_dimensions) / len(scored_dimensions) if scored_dimensions else 0.0
 
     failure_counts: Counter[str] = Counter(tag for row in predictions for tag in row.get("failure_tags", []))

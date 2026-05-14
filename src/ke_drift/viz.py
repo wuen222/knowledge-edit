@@ -10,16 +10,10 @@ from .io_utils import ensure_dir, read_json_records, slugify, write_csv
 from .internal import load_hidden_states
 
 
-def _setup_chinese_matplotlib() -> None:
+def _setup_matplotlib() -> None:
     import matplotlib.pyplot as plt
 
-    plt.rcParams["font.sans-serif"] = [
-        "Noto Sans CJK SC",
-        "SimHei",
-        "Microsoft YaHei",
-        "Arial Unicode MS",
-        "DejaVu Sans",
-    ]
+    plt.rcParams["font.sans-serif"] = ["DejaVu Sans"]
     plt.rcParams["axes.unicode_minus"] = False
 
 
@@ -45,10 +39,10 @@ def collect_checkpoint_rows(run_config_path: Path) -> list[dict[str, Any]]:
             "model": config.get("model", ""),
             "dataset": config.get("dataset", ""),
             "checkpoint": int(metrics.get("checkpoint", checkpoint_dir.name.split("_")[-1])),
-            "reliability": metrics.get("dimensions", {}).get("reliability", 0.0),
-            "generalization": metrics.get("dimensions", {}).get("generalization", 0.0),
-            "locality": metrics.get("dimensions", {}).get("locality", 0.0),
-            "portability": metrics.get("dimensions", {}).get("portability", 0.0),
+            "reliability": metrics.get("dimensions", {}).get("reliability"),
+            "generalization": metrics.get("dimensions", {}).get("generalization"),
+            "locality": metrics.get("dimensions", {}).get("locality"),
+            "portability": metrics.get("dimensions", {}).get("portability"),
             "average": metrics.get("dimensions", {}).get("average", 0.0),
             "hidden_mean_cosine_distance": summary.get("hidden_mean_cosine_distance", 0.0),
             "weight_mean_relative_l2": summary.get("weight_mean_relative_l2", 0.0),
@@ -78,7 +72,7 @@ def plot_metric_curves(df: pd.DataFrame, output_dir: str | Path) -> None:
     import matplotlib.pyplot as plt
     import seaborn as sns
 
-    _setup_chinese_matplotlib()
+    _setup_matplotlib()
     out = ensure_dir(output_dir)
     metrics = ["reliability", "generalization", "locality", "portability", "average"]
     long_df = df.melt(
@@ -87,10 +81,14 @@ def plot_metric_curves(df: pd.DataFrame, output_dir: str | Path) -> None:
         var_name="metric",
         value_name="score",
     )
+    long_df["score"] = pd.to_numeric(long_df["score"], errors="coerce")
+    long_df = long_df.dropna(subset=["score"])
+    if long_df.empty:
+        return
     plt.figure(figsize=(10, 6))
     sns.lineplot(data=long_df, x="checkpoint", y="score", hue="method", style="metric", markers=True)
     plt.ylim(-0.02, 1.02)
-    plt.title("自回归行为指标随连续编辑次数变化")
+    plt.title("Autoregressive Behavior Metrics Across Sequential Edits")
     plt.tight_layout()
     plt.savefig(out / "behavior_metrics.png", dpi=220)
     plt.close()
@@ -104,13 +102,13 @@ def plot_internal_curves(df: pd.DataFrame, output_dir: str | Path) -> None:
     import matplotlib.pyplot as plt
     import seaborn as sns
 
-    _setup_chinese_matplotlib()
+    _setup_matplotlib()
     out = ensure_dir(output_dir)
     fig, axes = plt.subplots(1, 2, figsize=(12, 4))
     sns.lineplot(data=df, x="checkpoint", y="hidden_mean_cosine_distance", hue="method", marker="o", ax=axes[0])
-    axes[0].set_title("平均 hidden-state 漂移")
+    axes[0].set_title("Mean Hidden-State Drift")
     sns.lineplot(data=df, x="checkpoint", y="weight_mean_relative_l2", hue="method", marker="o", ax=axes[1])
-    axes[1].set_title("平均参数 relative L2")
+    axes[1].set_title("Mean Weight Relative L2")
     plt.tight_layout()
     plt.savefig(out / "internal_summary.png", dpi=220)
     plt.close()
@@ -121,7 +119,7 @@ def plot_weight_heatmaps(run_config_path: Path, output_dir: str | Path) -> None:
     import pandas as pd
     import seaborn as sns
 
-    _setup_chinese_matplotlib()
+    _setup_matplotlib()
     run_dir = run_config_path.parent
     out = ensure_dir(output_dir)
     rows: list[dict[str, Any]] = []
@@ -138,7 +136,7 @@ def plot_weight_heatmaps(run_config_path: Path, output_dir: str | Path) -> None:
     pivot = df.pivot_table(index="layer", columns="checkpoint", values="relative_l2", aggfunc="mean").fillna(0.0)
     plt.figure(figsize=(8, max(4, len(pivot) * 0.2)))
     sns.heatmap(pivot, cmap="magma", cbar_kws={"label": "relative L2"})
-    plt.title(f"参数扰动热力图：{run_dir.name}")
+    plt.title(f"Weight Delta Heatmap: {run_dir.name}")
     plt.tight_layout()
     plt.savefig(out / f"{slugify(run_dir.name)}_weight_heatmap.png", dpi=220)
     plt.close()
@@ -149,7 +147,7 @@ def plot_hidden_layer_curves(run_config_path: Path, output_dir: str | Path) -> N
     import pandas as pd
     import seaborn as sns
 
-    _setup_chinese_matplotlib()
+    _setup_matplotlib()
     run_dir = run_config_path.parent
     out = ensure_dir(output_dir)
     rows: list[dict[str, Any]] = []
@@ -162,7 +160,7 @@ def plot_hidden_layer_curves(run_config_path: Path, output_dir: str | Path) -> N
     df = pd.DataFrame(rows)
     plt.figure(figsize=(10, 5))
     sns.lineplot(data=df, x="layer", y="mean_cosine_distance", hue="checkpoint", palette="viridis")
-    plt.title(f"层级 hidden-state 漂移：{run_dir.name}")
+    plt.title(f"Layer-Wise Hidden-State Drift: {run_dir.name}")
     plt.tight_layout()
     plt.savefig(out / f"{slugify(run_dir.name)}_hidden_layer_drift.png", dpi=220)
     plt.close()
@@ -195,7 +193,7 @@ def plot_hidden_projections(
     import pandas as pd
     import seaborn as sns
 
-    _setup_chinese_matplotlib()
+    _setup_matplotlib()
     run_dir = run_config_path.parent
     out = ensure_dir(output_dir)
     arrays: list[np.ndarray] = []
@@ -238,7 +236,7 @@ def plot_hidden_projections(
         df = pd.DataFrame({"x": points[:, 0], "y": points[:, 1], "checkpoint": label_arr, "category": cat_arr})
         plt.figure(figsize=(7, 6))
         sns.scatterplot(data=df, x="x", y="y", hue="checkpoint", style="category", s=22, alpha=0.75)
-        plt.title(f"{method.upper()} hidden-state 投影：{run_dir.name}")
+        plt.title(f"{method.upper()} Hidden-State Projection: {run_dir.name}")
         plt.tight_layout()
         suffix = f"{method}_seed{seed}" if method == "tsne" else method
         plt.savefig(out / f"{slugify(run_dir.name)}_{suffix}.png", dpi=220)
@@ -250,7 +248,7 @@ def plot_token_trajectories(run_config_path: Path, output_dir: str | Path) -> No
     import pandas as pd
     import seaborn as sns
 
-    _setup_chinese_matplotlib()
+    _setup_matplotlib()
     run_dir = run_config_path.parent
     out = ensure_dir(output_dir)
     for checkpoint_dir in sorted(run_dir.glob("checkpoint_*")):
@@ -267,7 +265,7 @@ def plot_token_trajectories(run_config_path: Path, output_dir: str | Path) -> No
         plt.figure(figsize=(9, 5))
         sns.lineplot(data=df, x="layer", y="probability", hue="token_label", style="edit_id")
         plt.yscale("log")
-        plt.title(f"目标 token 概率轨迹：{run_dir.name} {checkpoint_dir.name}")
+        plt.title(f"Target Token Probability Trajectory: {run_dir.name} {checkpoint_dir.name}")
         plt.tight_layout()
         plt.savefig(out / f"{slugify(run_dir.name)}_{checkpoint_dir.name}_token_trajectory.png", dpi=220)
         plt.close()

@@ -118,14 +118,15 @@ python scripts/prepare_data.py --dataset zsre --n-edits 100 --seed 42
 
 ```bash
 python scripts/run_sequential_edit.py \
-  --model meta-llama/Meta-Llama-3-8B-Instruct \
+  --model /root/autodl-tmp/models/Meta-Llama-3-8B-Instruct \
   --method ROME \
+  --hparams /root/autodl-tmp/EasyEdit/hparams/ROME/llama3-8b.yaml \
   --checkpoints 0 1 2 \
   --max-edits 2 \
   --probe-limit 20 \
   --batch-size 1 \
   --hidden-batch-size 1 \
-  --easyedit-root /root/EasyEdit \
+  --easyedit-root /root/autodl-tmp/EasyEdit \
   2>&1 | tee /root/autodl-tmp/logs/smoke_rome.log
 ```
 

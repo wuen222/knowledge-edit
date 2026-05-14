@@ -1,0 +1,26 @@
+[
+    {
+        "pre": {
+            "rewrite_acc": [
+                0.0
+            ],
+            "portability": {}
+        },
+        "case_id": 0,
+        "requested_rewrite": {
+            "prompt": "When was 503 Evelyn discovered?",
+            "target_new": "17 503",
+            "ground_truth": "19 January 1903",
+            "portability": {},
+            "locality": {},
+            "subject": "503 Evelyn"
+        },
+        "post": {
+            "rewrite_acc": [
+                0.5
+            ],
+            "locality": {},
+            "portability": {}
+        }
+    }
+]

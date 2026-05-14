@@ -29,7 +29,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("-h", "--help", action="help", help="显示帮助信息并退出。")
     parser.add_argument("--model", default="meta-llama/Meta-Llama-3-8B-Instruct")
     parser.add_argument("--dataset", default="zsre")
-    parser.add_argument("--method", required=True, help="知识编辑方法，例如 FT-L、ROME、MEMIT、PMET、SCR-LITE。")
+    parser.add_argument("--method", required=True, help="知识编辑方法，例如 FT-L、ROME、MEMIT、PMET、AlphaEdit、SCR-LITE。")
     parser.add_argument("--prepared-dir", default="/root/autodl-tmp/data/prepared/zsre")
     parser.add_argument("--runs-root", default="/root/autodl-tmp/runs")
     parser.add_argument("--models-cache", default="/root/autodl-tmp/models")

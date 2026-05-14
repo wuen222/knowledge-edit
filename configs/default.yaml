@@ -12,11 +12,17 @@ n_edits: 100
 # 连续编辑检查点。
 checkpoints: [0, 1, 10, 50, 100]
 
-# 第一版核心方法矩阵：
+# 主实验核心方法矩阵：
 # FT-L：直接微调基线
-# ROME/MEMIT/PMET：locate-then-edit 参数编辑代表
-# SCR-LITE：非参数/记忆式对照
-methods: [FT-L, ROME, MEMIT, PMET, SCR-LITE]
+# ROME/MEMIT：经典 locate-then-edit 参数编辑代表
+# PMET：精细组件级参数编辑代表
+# AlphaEdit：null-space 约束型参数编辑代表，用来检验扰动保护是否能缓解连续编辑退化
+# IKE/SERAC/GRACE：后续非直接改原模型权重的对照方法
+methods: [FT-L, ROME, MEMIT, PMET, AlphaEdit]
+
+# 非直接改原模型权重的对照矩阵；当前主代码已保留 SCR-LITE 工程 sanity check，
+# IKE/SERAC/GRACE 建议作为下一批对照接入或通过 EasyEdit 单独运行。
+non_parametric_methods: [IKE, SERAC, GRACE]
 
 paths:
   # AutoDL 数据盘根目录。

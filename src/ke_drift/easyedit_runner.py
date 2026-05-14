@@ -11,8 +11,15 @@ HPARAM_CLASS_BY_METHOD = {
     "MEMIT": ("MEMITHyperParams",),
     "PMET": ("PMETHyperParams",),
     "ALPHAEDIT": ("AlphaEditHyperParams",),
+    "ALPHA-EDIT": ("AlphaEditHyperParams",),
     "FT": ("FTHyperParams",),
     "FT-L": ("FTHyperParams", "FTLHyperParams"),
+}
+
+HPARAM_DIR_CANDIDATES = {
+    "FT-L": ("FT", "FT-L"),
+    "ALPHAEDIT": ("AlphaEdit", "ALPHAEDIT", "Alpha-Edit", "ALPHA-EDIT"),
+    "ALPHA-EDIT": ("AlphaEdit", "ALPHAEDIT", "Alpha-Edit", "ALPHA-EDIT"),
 }
 
 
@@ -28,13 +35,35 @@ def add_easyedit_to_path(easyedit_root: str | Path | None) -> None:
         sys.path.insert(0, str(root))
 
 
+def _normalize_dir_name(value: str) -> str:
+    return value.replace("-", "").replace("_", "").lower()
+
+
+def find_hparams_dir(root: Path, method_key: str) -> Path:
+    hparams_root = root / "hparams"
+    candidate_names = HPARAM_DIR_CANDIDATES.get(method_key, (method_key,))
+    for name in candidate_names:
+        candidate = hparams_root / name
+        if candidate.exists():
+            return candidate
+
+    if hparams_root.exists():
+        normalized_candidates = {_normalize_dir_name(name) for name in candidate_names}
+        for child in hparams_root.iterdir():
+            if child.is_dir() and _normalize_dir_name(child.name) in normalized_candidates:
+                return child
+
+    expected = hparams_root / candidate_names[0]
+    raise FileNotFoundError(
+        f"没有找到 EasyEdit hparams 目录：{expected}。"
+        f"已尝试目录名：{', '.join(candidate_names)}。"
+    )
+
+
 def find_hparams_file(easyedit_root: str | Path, method: str, model_name: str) -> Path:
     root = Path(easyedit_root)
     method_key = normalize_method(method)
-    method_dir_name = "FT" if method_key == "FT-L" else method_key
-    method_dir = root / "hparams" / method_dir_name
-    if not method_dir.exists():
-        raise FileNotFoundError(f"没有找到 EasyEdit hparams 目录：{method_dir}")
+    method_dir = find_hparams_dir(root, method_key)
 
     candidates = list(method_dir.rglob("*.yaml")) + list(method_dir.rglob("*.yml"))
     if not candidates:

@@ -8,7 +8,8 @@
 
 - 模型：`meta-llama/Meta-Llama-3-8B-Instruct`
 - 数据：优先使用 ZsRE，后续补 CounterFact
-- 方法矩阵：`FT-L`、`ROME`、`MEMIT`、`PMET`、`SCR-LITE`
+- 参数编辑方法矩阵：`FT-L`、`ROME`、`MEMIT`、`PMET`、`AlphaEdit`
+- 非直接改原模型权重对照：后续补 `IKE`、`SERAC`、`GRACE`
 - 连续编辑检查点：`0, 1, 10, 50, 100`
 - 证据链：行为指标下降、参数扰动、hidden-state drift、token trajectory、t-SNE/PCA/UMAP 静态图
 
@@ -132,12 +133,19 @@ python scripts/run_sequential_edit.py \
 
 ```bash
 find /root/EasyEdit/hparams -maxdepth 2 -iname "*llama*"
+find /root/EasyEdit/hparams -maxdepth 2 -iname "*alpha*"
 ```
 
 然后显式传入：
 
 ```bash
 --hparams /root/EasyEdit/hparams/ROME/<实际配置文件>.yaml
+```
+
+AlphaEdit 如果自动匹配失败，也同样显式传入：
+
+```bash
+--hparams /root/EasyEdit/hparams/AlphaEdit/<实际配置文件>.yaml
 ```
 
 ## 正式实验
@@ -152,9 +160,15 @@ python scripts/run_sequential_edit.py --model meta-llama/Meta-Llama-3-8B-Instruc
 python scripts/run_sequential_edit.py --model meta-llama/Meta-Llama-3-8B-Instruct --method ROME --checkpoints 0 1 10 50 100 --easyedit-root /root/EasyEdit 2>&1 | tee /root/autodl-tmp/logs/rome.log
 python scripts/run_sequential_edit.py --model meta-llama/Meta-Llama-3-8B-Instruct --method MEMIT --checkpoints 0 1 10 50 100 --easyedit-root /root/EasyEdit 2>&1 | tee /root/autodl-tmp/logs/memit.log
 python scripts/run_sequential_edit.py --model meta-llama/Meta-Llama-3-8B-Instruct --method PMET --checkpoints 0 1 10 50 100 --easyedit-root /root/EasyEdit 2>&1 | tee /root/autodl-tmp/logs/pmet.log
-python scripts/run_sequential_edit.py --model meta-llama/Meta-Llama-3-8B-Instruct --method SCR-LITE --checkpoints 0 1 10 50 100 2>&1 | tee /root/autodl-tmp/logs/scr_lite.log
+python scripts/run_sequential_edit.py --model meta-llama/Meta-Llama-3-8B-Instruct --method AlphaEdit --checkpoints 0 1 10 50 100 --easyedit-root /root/EasyEdit 2>&1 | tee /root/autodl-tmp/logs/alphaedit.log
 
 python scripts/make_figures.py --runs /root/autodl-tmp/runs --out /root/autodl-tmp/artifacts
+```
+
+`SCR-LITE` 仍可作为工程 sanity check 或 appendix 方法运行，但不建议放入主表：
+
+```bash
+python scripts/run_sequential_edit.py --model meta-llama/Meta-Llama-3-8B-Instruct --method SCR-LITE --checkpoints 0 1 10 50 100 2>&1 | tee /root/autodl-tmp/logs/scr_lite.log
 ```
 
 监控命令：
@@ -193,7 +207,7 @@ rsync -av root@<AutoDL地址>:/root/autodl-tmp/artifacts/ ./artifacts/
 ## 常见问题
 
 - Llama 3 下载失败：先确认 Hugging Face 账号已同意模型协议，并在 AutoDL 上执行过 `huggingface-cli login`。
-- EasyEdit 找不到配置：使用 `find /root/EasyEdit/hparams -maxdepth 2 -iname "*llama*"` 查实际 hparams 文件，再传 `--hparams`。
+- EasyEdit 找不到配置：使用 `find /root/EasyEdit/hparams -maxdepth 2 -iname "*llama*"` 或 `find /root/EasyEdit/hparams -maxdepth 2 -iname "*alpha*"` 查实际 hparams 文件，再传 `--hparams`。
 - 显存不足：冒烟测试先用 `--batch-size 1 --hidden-batch-size 1 --probe-limit 20`；FT-L 最吃显存，建议最后跑。
 - 本地没有 GPU：本地只做代码、文档、结果整理和画图检查；真实编辑实验放在 AutoDL A800 上跑。
 - t-SNE 不稳定：不要单独用 t-SNE 下结论，必须结合原始高维 cosine drift 或 CKA。
